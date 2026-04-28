@@ -519,6 +519,7 @@ function renderStudentTable() {
                     <th>Aadhaar</th>
                     <th>Joining Date</th>
                     <th>Fee Status</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -533,6 +534,11 @@ function renderStudentTable() {
                         <td>${s.aadhaar || "-"}</td>
                         <td>${formatDate(s.joiningDate)}</td>
                         <td><span class="badge ${s.feeStatus === "Paid" ? "bg-success" : "bg-warning text-dark"}">${s.feeStatus}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" onclick="deleteStudentHandler('${s._id}', '${s.name}')">
+                                <i class="fa fa-trash"></i> Delete
+                            </button>
+                        </td>
                     </tr>
                 `,
                   )
@@ -541,6 +547,23 @@ function renderStudentTable() {
         </table>
     </div>
   `;
+
+  // Attach delete handlers
+  window.deleteStudentHandler = async function(studentId, studentName) {
+    if (confirm(`Are you sure you want to delete ${studentName}?`)) {
+      try {
+        const response = await deleteStudent(studentId);
+        if (response.success) {
+          alert("Student deleted successfully!");
+          render(); // Refresh
+        } else {
+          alert(response.message || "Failed to delete student");
+        }
+      } catch (error) {
+        alert("Error: " + error.message);
+      }
+    }
+  };
 }
 
 async function renderSeats(el) {

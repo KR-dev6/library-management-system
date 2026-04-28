@@ -3,6 +3,7 @@ const router = express.Router();
 const Student = require("../models/Student");
 const Seat = require("../models/Seat");
 const Fee = require("../models/Fee");
+const User = require("../models/User");
 const {
   authMiddleware,
   adminMiddleware,
@@ -91,8 +92,36 @@ router.post("/", authMiddleware, adminMiddleware, async (req, res) => {
       });
     }
 
+    let finalUserId = userId;
+
+    // If userId not provided, auto-create a user
+    if (!userId) {
+      try {
+        // Generate unique username from name and timestamp
+        const baseUsername = name.toLowerCase().replace(/\s+/g, "_");
+        const username = `${baseUsername}_${Date.now()}`;
+        const defaultPassword = "student123"; // Default password
+
+        const newUser = new User({
+          username,
+          password: defaultPassword,
+          role: "student",
+          isActive: true,
+        });
+
+        await newUser.save();
+        finalUserId = newUser._id;
+      } catch (userError) {
+        return res.status(400).json({
+          success: false,
+          message: "Failed to create user account",
+          error: userError.message,
+        });
+      }
+    }
+
     const student = new Student({
-      userId,
+      userId: finalUserId,
       name,
       phone,
       aadhaar,
