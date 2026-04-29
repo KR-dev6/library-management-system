@@ -4,6 +4,7 @@ const Student = require("../models/Student");
 const Seat = require("../models/Seat");
 const Fee = require("../models/Fee");
 const User = require("../models/User");
+const Booking = require("../models/Booking");
 const {
   authMiddleware,
   adminMiddleware,
