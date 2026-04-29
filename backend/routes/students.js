@@ -73,13 +73,21 @@ router.get("/:id", authMiddleware, async (req, res) => {
  */
 router.post("/", authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const { userId, name, phone, aadhaar, address, joiningDate } = req.body;
+    const { userId, name, phone, aadhaar, address, joiningDate, photo } = req.body;
 
     // Validation
     if (!name || !phone) {
       return res.status(400).json({
         success: false,
         message: "Name and phone are required",
+      });
+    }
+
+    // Photo is compulsory
+    if (!photo) {
+      return res.status(400).json({
+        success: false,
+        message: "Student photo is required",
       });
     }
 
@@ -126,6 +134,7 @@ router.post("/", authMiddleware, adminMiddleware, async (req, res) => {
       phone,
       aadhaar,
       address,
+      photo,
       joiningDate: joiningDate || Date.now(),
     });
 
@@ -152,7 +161,7 @@ router.post("/", authMiddleware, adminMiddleware, async (req, res) => {
  */
 router.put("/:id", authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const { name, phone, aadhaar, address, feeStatus } = req.body;
+    const { name, phone, aadhaar, address, feeStatus, photo } = req.body;
 
     let student = await Student.findById(req.params.id);
 
@@ -169,6 +178,7 @@ router.put("/:id", authMiddleware, adminMiddleware, async (req, res) => {
     if (aadhaar) student.aadhaar = aadhaar;
     if (address) student.address = address;
     if (feeStatus) student.feeStatus = feeStatus;
+    if (photo) student.photo = photo;
 
     student.updatedAt = Date.now();
     await student.save();
@@ -203,13 +213,40 @@ router.delete("/:id", authMiddleware, adminMiddleware, async (req, res) => {
       });
     }
 
-    // Soft delete - mark as inactive
-    student.isActive = false;
-    await student.save();
+    // Release the seat if student has one
+    if (student.currentSeat) {
+      const seat = await Seat.findById(student.currentSeat);
+      if (seat) {
+        seat.status = "Available";
+        seat.assignedStudent = null;
+        seat.assignedDate = null;
+        await seat.save();
+
+        // Close active booking
+        await Booking.updateOne(
+          { student: req.params.id, seat: student.currentSeat, status: "Active" },
+          { status: "Closed", checkOutDate: Date.now() },
+        );
+      }
+    }
+
+    // Delete all fees related to this student
+    await Fee.deleteMany({ student: req.params.id });
+
+    // Delete all bookings related to this student
+    await Booking.deleteMany({ student: req.params.id });
+
+    // Delete the associated user account
+    if (student.userId) {
+      await User.findByIdAndDelete(student.userId);
+    }
+
+    // Delete the student completely (hard delete)
+    await Student.findByIdAndDelete(req.params.id);
 
     res.json({
       success: true,
-      message: "Student deleted successfully",
+      message: "Student and all related records deleted successfully",
     });
   } catch (error) {
     res.status(500).json({

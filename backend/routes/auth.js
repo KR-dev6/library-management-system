@@ -70,7 +70,7 @@ router.post("/admin-login", async (req, res) => {
 
 /**
  * @route   POST /api/auth/student-login
- * @desc    Login for student users
+ * @desc    Login for student users using phone/aadhaar and password
  * @access  Public
  */
 router.post("/student-login", async (req, res) => {
@@ -81,19 +81,29 @@ router.post("/student-login", async (req, res) => {
     if (!username || !password) {
       return res.status(400).json({
         success: false,
-        message: "Username and password are required",
+        message: "Phone/Aadhaar and password are required",
       });
     }
 
-    // Find user
-    const user = await User.findOne({ username, role: "student" }).select(
-      "+password",
-    );
+    // Find student by phone or aadhaar (username field contains phone/aadhaar for students)
+    let student = await Student.findOne({
+      $or: [{ phone: username }, { aadhaar: username }],
+    });
+
+    if (!student) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials. Student not found.",
+      });
+    }
+
+    // Get associated user
+    const user = await User.findById(student.userId).select("+password");
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: "Invalid credentials",
+        message: "User account not found. Please contact admin.",
       });
     }
 
@@ -107,8 +117,13 @@ router.post("/student-login", async (req, res) => {
       });
     }
 
-    // Get student details
-    const student = await Student.findOne({ userId: user._id });
+    // Check if student record is active (was deleted)
+    if (student.isActive === false) {
+      return res.status(401).json({
+        success: false,
+        message: "This student account has been deactivated. Please contact admin.",
+      });
+    }
 
     // Generate JWT token
     const token = jwt.sign(
@@ -116,7 +131,7 @@ router.post("/student-login", async (req, res) => {
         userId: user._id,
         username: user.username,
         role: user.role,
-        studentId: student?._id,
+        studentId: student._id,
       },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRE || "7d" },

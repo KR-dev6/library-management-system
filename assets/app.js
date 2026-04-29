@@ -441,6 +441,12 @@ async function renderStudents(el) {
                         <label class="form-label">Aadhaar Number</label>
                         <input type="text" class="form-control" name="aadhaar" required>
                     </div>
+                    <div class="mb-2">
+                        <label class="form-label">Student Photo <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" name="photo" accept="image/*" required>
+                        <small class="text-muted">Upload a clear photo of the student (JPG, PNG, etc.)</small>
+                        <img id="photoPreview" style="display: none; width: 100%; margin-top: 10px; border-radius: 4px;" />
+                    </div>
                     <button type="submit" class="btn btn-primary w-100 mt-2">Add Student</button>
                 </form>
             </div>
@@ -475,11 +481,28 @@ async function renderStudents(el) {
     btn.disabled = true;
 
     try {
+      // Get photo file
+      const photoFile = form.photo.files[0];
+      if (!photoFile) {
+        alert("Photo is required!");
+        btn.disabled = false;
+        return;
+      }
+
+      // Convert photo to base64
+      const photoBase64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(photoFile);
+      });
+
       const studentData = {
         name: form.name.value,
         phone: form.phone.value,
         address: form.address.value,
         aadhaar: form.aadhaar.value,
+        photo: photoBase64,
         isActive: true,
       };
 
@@ -496,6 +519,23 @@ async function renderStudents(el) {
       btn.disabled = false;
     }
   };
+
+  // Preview photo on file selection
+  const photoInput = document.querySelector('input[name="photo"]');
+  if (photoInput) {
+    photoInput.addEventListener("change", function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          const preview = document.getElementById("photoPreview");
+          preview.src = event.target.result;
+          preview.style.display = "block";
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
 }
 
 function renderStudentTable() {
@@ -932,7 +972,7 @@ function renderStudentContent(student) {
         <div class="col-lg-4">
             <div class="card p-4 text-center">
                 <div class="mb-3">
-                    <i class="fa fa-user-circle fa-5x text-secondary"></i>
+                    ${student.photo ? `<img src="${student.photo}" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #dee2e6;" />` : `<i class="fa fa-user-circle fa-5x text-secondary"></i>`}
                 </div>
                 <div class="fw-bold fs-5 mb-1">${student.name}</div>
                 <div class="text-muted small">ID: ${student._id?.substring(0, 8)}</div>
@@ -947,7 +987,7 @@ function renderStudentContent(student) {
                     </div>
                     <div class="col-md-6">
                         <div class="stat-card-label"><i class="fa fa-chair me-2"></i>Seat Number</div>
-                        <div class="stat-card-value" style="font-size: 1.5rem;">${student.currentSeat || "Unassigned"}</div>
+                        <div class="stat-card-value" style="font-size: 1.5rem;">${student.currentSeat?.seatNumber || "Unassigned"}</div>
                     </div>
                 </div>
             </div>
