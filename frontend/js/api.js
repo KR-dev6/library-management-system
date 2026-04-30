@@ -9,7 +9,7 @@
  * All functions return: { success: true/false, data: {...}, message: "..." }
  */
 
-const API_BASE_URL = "http://localhost:5000/api"; // Change for production
+const API_BASE_URL = "https://library-management-system-i0yf.onrender.com/api"; // Change for production
 
 // ════════════════════════════════════════════════════════════════
 // UTILITY FUNCTIONS
