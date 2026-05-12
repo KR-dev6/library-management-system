@@ -407,11 +407,6 @@ async function renderDashboard(el) {
               </div>
           </div>
       </div>
-      
-      <div class="card p-4 welcome-card">
-          <h5 class="mb-2"><i class="fa fa-check-circle text-success me-2"></i>Database Status</h5>
-          <p class="mb-0">✅ Connected to MongoDB - Real data from database</p>
-      </div>
     `;
   } catch (error) {
     showError(el, error.message);
