@@ -1041,5 +1041,35 @@ function renderStudentContent(student) {
   `;
 }
 
-// Initialize app
-render();
+// Initialize app - restore session from localStorage on refresh
+async function init() {
+  const token = localStorage.getItem("authToken");
+  const storedUserType = localStorage.getItem("userType");
+  const storedUser = localStorage.getItem("currentUser");
+  const storedStudentId = localStorage.getItem("currentStudentId");
+
+  if (token && storedUserType) {
+    try {
+      const response = await getCurrentUser();
+      if (response.success) {
+        loggedIn = true;
+        userType = storedUserType;
+        currentUser = storedUser ? JSON.parse(storedUser) : response.data;
+        if (storedUserType === "student" && storedStudentId) {
+          currentStudentId = storedStudentId;
+          currentPage = "student-dashboard";
+        } else {
+          currentPage = "dashboard";
+        }
+      } else {
+        logout();
+      }
+    } catch (e) {
+      logout();
+    }
+  }
+
+  render();
+}
+
+init();
